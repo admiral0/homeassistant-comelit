@@ -63,10 +63,13 @@ class ComelitVedo:
             headers['Cookie'] = uid
 
         millis = int(round(time.time() * 1000))
-        if "?" in path:
-            url = "http://{0}:{1}/{2}&_={3}".format(self.host, self.port, path, millis)
+        if ".cgi" in path:
+            url = "http://{0}:{1}/{2}".format(self.host, self.port, path)
         else:
-            url = "http://{0}:{1}/{2}?_={3}".format(self.host, self.port, path, millis)
+            if "?" in path:
+                url = "http://{0}:{1}/{2}&_={3}".format(self.host, self.port, path, millis)
+            else:
+                url = "http://{0}:{1}/{2}?_={3}".format(self.host, self.port, path, millis)
         return url, headers
 
     # Do the GET from the vedo IP
