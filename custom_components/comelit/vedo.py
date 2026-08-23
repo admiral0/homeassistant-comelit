@@ -63,10 +63,13 @@ class ComelitVedo:
             headers['Cookie'] = uid
 
         millis = int(round(time.time() * 1000))
-        if "?" in path:
-            url = "http://{0}:{1}/{2}&_={3}".format(self.host, self.port, path, millis)
+        if ".cgi" in path:
+            url = "http://{0}:{1}/{2}".format(self.host, self.port, path)
         else:
-            url = "http://{0}:{1}/{2}?_={3}".format(self.host, self.port, path, millis)
+            if "?" in path:
+                url = "http://{0}:{1}/{2}&_={3}".format(self.host, self.port, path, millis)
+            else:
+                url = "http://{0}:{1}/{2}?_={3}".format(self.host, self.port, path, millis)
         return url, headers
 
     # Do the GET from the vedo IP
@@ -127,9 +130,11 @@ class ComelitVedo:
         for i in range(1, ARM_DISARM_ATTEMPT+1):
             try:
                 uid = self.login()
-                path = "{0}?vedo=1&{1}={2}&force=1".format(VedoRequest.ACTION, key, id)
-                self.get(uid, path, False)
-                _LOGGER.info("Armed/Disarmed the area %s", id)
+                headers = DEFAULT_HEADERS.copy()
+                url, headers = self.build_http(headers, uid, VedoRequest.ACTION)
+                params = {"forced": 1,"vedo_param": 1, "type_param": key , "area_param": id}
+                self.post(url, params, headers)
+                _LOGGER.info("Armed/Disarmed the area: %s", id)
                 self.logout(uid)
                 break
             except Exception as e:
@@ -186,12 +191,19 @@ class ComelitVedo:
         try:
             area_id = area["id"]
             name = area["name"]
-            if area["armed"] == 4:
-                state = AlarmControlPanelState.ARMED_AWAY
-            elif area["armed"] == 1:
-                state = AlarmControlPanelState.ARMED_NIGHT
+            if area["armed"] > 0:
+              if area['out_time'] == 1:
+                   state = AlarmControlPanelState.ARMING
+              elif area["alarm"] == 1 or area["sabotage"] == 1 or area["anomaly"] == 1:
+                   state = AlarmControlPanelState.TRIGGERED
+              elif area["armed"] == 4:
+                   state = AlarmControlPanelState.ARMED_AWAY
+              elif area["armed"] == 1:
+                   state = AlarmControlPanelState.ARMED_NIGHT
             else:
                 state = AlarmControlPanelState.DISARMED
+            
+
 
             if area_id not in self.areas:
                 if hasattr(self, 'alarm_add_entities'):
@@ -245,6 +257,7 @@ class SensorUpdater (Thread):
                 in_area = zone_desc["in_area"]
                 descs = areas_desc["description"]
                 ready = areas_stat["ready"]
+                present = areas_desc["present"] 
 
                 sensors = []
 
@@ -278,19 +291,20 @@ class SensorUpdater (Thread):
                     out_time = areas_stat["out_time"]
 
                     for i in range(len(descs)):
-                        area = {"name": descs[i],
-                                "id": i,
-                                "p1_pres": p1_pres[i],
-                                "p2_pres": p2_pres[i],
-                                "ready": ready[i],
-                                "armed": armed[i],
-                                "alarm": alarm[i],
-                                "alarm_memory": alarm_memory[i],
-                                "sabotage": sabotage[i],
-                                "anomaly": anomaly[i],
-                                "in_time": in_time[i],
-                                "out_time": out_time[i]}
-                        self._vedo.update_area(area)
+                        if present[i] == 1:
+                            area = {"name": descs[i],
+                                    "id": i,
+                                    "p1_pres": p1_pres[i],
+                                    "p2_pres": p2_pres[i],
+                                    "ready": ready[i],
+                                    "armed": armed[i],
+                                    "alarm": alarm[i],
+                                    "alarm_memory": alarm_memory[i],
+                                    "sabotage": sabotage[i],
+                                    "anomaly": anomaly[i],
+                                    "in_time": in_time[i],
+                                    "out_time": out_time[i]}
+                            self._vedo.update_area(area)
             except CookieException:
                 self.logout()
             except Exception as e:
