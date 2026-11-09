@@ -1,4 +1,4 @@
 -r requirements.txt
-pytest-homeassistant-custom-component==0.13.236
+pytest-homeassistant-custom-component==0.13.340
 pytest-asyncio
 ruff

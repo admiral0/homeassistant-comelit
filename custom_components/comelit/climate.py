@@ -11,11 +11,9 @@ from homeassistant.components.climate import (
 
 from homeassistant.const import (
     ATTR_TEMPERATURE,
-    STATE_OFF,
     STATE_IDLE,
-    STATE_ON
-)
-from homeassistant.components.sensor import (
+    STATE_OFF,
+    STATE_ON,
     UnitOfTemperature,
 )
 
